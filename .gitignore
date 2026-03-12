@@ -25,3 +25,6 @@ data/vector_store/
 
 # UV lock file
 uv.lock
+
+# Generated text
+data/text_files/
