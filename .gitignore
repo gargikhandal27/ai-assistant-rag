@@ -28,3 +28,6 @@ uv.lock
 
 # Generated text
 data/text_files/
+data/
+pdf_files/
+*.pdf

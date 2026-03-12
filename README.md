@@ -1,9 +1,10 @@
 # AI ASSISTANT – PDE RAG System
 
-This project implements an **AI Assistant based on Retrieval-Augmented Generation (RAG)** that answers questions from **Partial Differential Equations (PDE) lecture notes**.
+This project implements an **AI Assistant based on Retrieval-Augmented Generation (RAG)** that answers questions from pdf.
 
 The system reads documents, converts them into embeddings, stores them in a vector database, retrieves relevant information for a query, and generates answers using a Large Language Model.
-
+Data files are not included in the repository due to size.
+Users can add their own PDFs to the /data folder.
 ---
 
 ## Features
