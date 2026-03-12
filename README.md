@@ -102,13 +102,6 @@ Run the main script:
 python main.py
 ```
 
-Example questions you can ask:
-
-* What is a partial differential equation?
-* Explain the heat equation.
-* What is the wave equation?
-* What is Laplace's equation?
-
 ---
 
 ## Technologies Used
