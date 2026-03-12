@@ -1,4 +1,4 @@
-# AI ASSISTANT – PDE RAG System
+# AI ASSISTANT – RAG System
 
 This project implements an **AI Assistant based on Retrieval-Augmented Generation (RAG)** that answers questions from pdf.
 
