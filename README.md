@@ -129,7 +129,7 @@ This project was built while learning about Retrieval-Augmented Generation (RAG)
 - YouTube tutorials on RAG systems
 - LangChain documentation
 - Vector database documentation
-- Research papers and PDE lecture notes
+
 
 These resources helped in understanding the concepts and implementing the system.
 
