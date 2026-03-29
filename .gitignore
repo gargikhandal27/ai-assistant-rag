@@ -7,15 +7,17 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
+.venv/
+ai-assisant-venc/
+
 # Environment variables
 .env
 
 # VSCode settings
 .vscode/
 
-# Vector database
-data/vector_store/
+# Vector database (IGNORE ONLY THIS, NOT DATA)
+vector_store/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -25,9 +27,3 @@ data/vector_store/
 
 # UV lock file
 uv.lock
-
-# Generated text
-data/text_files/
-data/
-pdf_files/
-*.pdf
