@@ -1,152 +1,198 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 from dotenv import load_dotenv
+from typing import List, Dict, Any
+
 load_dotenv()
 
-from langchain_core.prompts import PromptTemplate
-from langchain_core.messages import HumanMessage, SystemMessage
 
+# ── Gemini ────────────────────────────────────────────────────────────────────
 class GeminiLLM:
+    MODELS = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+    ]
+
     def __init__(self, model_name: str = "gemini-2.5-flash", api_key: str = None):
-        """
-        Initialize Gemini LLM
-
-        Args:
-            model_name: Gemini model name
-            api_key: Google API key (or set GOOGLE_API_KEY environment variable)
-        """
-
-        self.model_name=model_name
-        self.api_key=api_key or os.environ.get("GOOGLE_API_KEY")
-
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        self.model_name = model_name
+        self.api_key = api_key or os.environ.get("GOOGLE_API_KEY")
         if not self.api_key:
-            raise ValueError(
-                "Gemini API key is required. Set GOOGLE_API_KEY environment variable or pass api_key parameter."
-            )
-
+            raise ValueError("Set GOOGLE_API_KEY environment variable.")
         self.llm = ChatGoogleGenerativeAI(
             model=self.model_name,
             google_api_key=self.api_key,
             temperature=0.1
         )
-
-        print(f"Initialized Gemini LLM with model: {self.model_name}")
+        print(f"Initialized Gemini LLM: {self.model_name}")
 
     def generate_response(self, query: str, context: str) -> str:
-        """
-        Generate response using retrieved context
-        """
-
-        prompt_template = PromptTemplate(
-            input_variables=["context", "question"],
-            template="""
-You are a helpful AI assistant. Use the following context to answer the question accurately and concisely.
-
-Context:
-{context}
-
-Question: {question}
-
-Answer:
-"""
+        from langchain_core.messages import HumanMessage
+        prompt = (
+            f"You are a helpful AI assistant. Use the context below to answer accurately.\n\n"
+            f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
         )
-
-        formatted_prompt = prompt_template.format(
-            context=context,
-            question=query
-        )
-
         try:
-            messages = [HumanMessage(content=formatted_prompt)]
-            response = self.llm.invoke(messages)
+            response = self.llm.invoke([HumanMessage(content=prompt)])
             return response.content
+        except Exception as e:
+            return f"Error generating response: {e}"
+
+
+# ── Groq ──────────────────────────────────────────────────────────────────────
+class GroqLLM:
+    MODELS = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "llama3-70b-8192",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it",
+    ]
+
+    def __init__(self, model_name: str = "llama-3.3-70b-versatile", api_key: str = None):
+        from groq import Groq
+        self.model_name = model_name
+        self.api_key = api_key or os.environ.get("GROQ_API_KEY")
+        if not self.api_key:
+            raise ValueError("Set GROQ_API_KEY environment variable.")
+        self.client = Groq(api_key=self.api_key)
+        print(f"Initialized Groq LLM: {self.model_name}")
+
+    def generate_response(self, query: str, context: str) -> str:
+        prompt = (
+            f"You are a helpful AI assistant. Use the context below to answer accurately.\n\n"
+            f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
+        )
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=1024,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"Error generating response: {e}"
+
+
+# ── OpenRouter ────────────────────────────────────────────────────────────────
+class OpenRouterLLM:
+    MODELS = [
+        "deepseek/deepseek-chat-v3-0324:free",
+        "meta-llama/llama-4-maverick:free",
+        "meta-llama/llama-4-scout:free",
+        "mistralai/mistral-7b-instruct:free",
+        "google/gemma-3-27b-it:free",
+    ]
+
+    def __init__(self, model_name: str = "deepseek/deepseek-chat-v3-0324:free", api_key: str = None):
+        import requests
+        self.model_name = model_name
+        self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY")
+        if not self.api_key:
+            raise ValueError("Set OPENROUTER_API_KEY environment variable.")
+        self._requests = requests
+        print(f"Initialized OpenRouter LLM: {self.model_name}")
+
+    def generate_response(self, query: str, context: str) -> str:
+        prompt = (
+            f"You are a helpful AI assistant. Use the context below to answer accurately.\n\n"
+            f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
+        )
+        try:
+            response = self._requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model_name,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.1,
+                },
+                timeout=60,
+            )
+            data = response.json()
+
+            if "error" in data:
+                return f"OpenRouter error: {data['error'].get('message', data['error'])}"
+
+            if not data.get("choices"):
+                return f"OpenRouter returned no choices. Full response: {data}"
+
+            return data["choices"][0]["message"]["content"]
 
         except Exception as e:
-            return f"Error generating response: {str(e)}"
+            return f"Error generating response: {e}"
 
-    def generate_response_simple(self, query: str, context: str) -> str:
-        """
-        Simple response generation
-        """
 
-        simple_prompt = f"""
-Based on this context:
-{context}
+# ── Factory ───────────────────────────────────────────────────────────────────
+PROVIDERS = {
+    "Google Gemini 🔵": GeminiLLM,
+    "Groq (Free ⚡)": GroqLLM,
+    "OpenRouter (Free Models 🌐)": OpenRouterLLM,
+}
 
-Question: {query}
+PROVIDER_MODELS = {
+    "Google Gemini 🔵": GeminiLLM.MODELS,
+    "Groq (Free ⚡)": GroqLLM.MODELS,
+    "OpenRouter (Free Models 🌐)": OpenRouterLLM.MODELS,
+}
 
-Answer:
-"""
+PROVIDER_ENV_KEYS = {
+    "Google Gemini 🔵": "GOOGLE_API_KEY",
+    "Groq (Free ⚡)": "GROQ_API_KEY",
+    "OpenRouter (Free Models 🌐)": "OPENROUTER_API_KEY",
+}
 
-        try:
-            messages = [HumanMessage(content=simple_prompt)]
-            response = self.llm.invoke(messages)
-            return response.content
+PROVIDER_LINKS = {
+    "Google Gemini 🔵": "https://aistudio.google.com/apikey",
+    "Groq (Free ⚡)": "https://console.groq.com/keys",
+    "OpenRouter (Free Models 🌐)": "https://openrouter.ai/keys",
+}
 
-        except Exception as e:
-            return f"Error: {str(e)}"
 
-# --- Advanced RAG Pipeline: Streaming, Citations, History, Summarization ---
-from typing import List, Dict, Any
-import time
+def create_llm(provider: str, model: str, api_key: str = None):
+    """Instantiate the correct LLM class."""
+    cls = PROVIDERS[provider]
+    return cls(model_name=model, api_key=api_key or None)
 
+
+# ── Advanced RAG Pipeline ─────────────────────────────────────────────────────
 class AdvancedRAGPipeline:
     def __init__(self, retriever, llm):
         self.retriever = retriever
         self.llm = llm
-        self.history = []  # Store query history
+        self.history: List[Dict[str, Any]] = []
 
-    def query(self, question: str, top_k: int = 5, min_score: float = 0.0, stream: bool = False, summarize: bool = False) -> Dict[str, Any]:
-        # Retrieve relevant documents
+    def swap_llm(self, new_llm):
+        """Hot-swap the LLM without rebuilding the whole pipeline."""
+        self.llm = new_llm
+
+    def query(self, question: str, top_k: int = 5, min_score: float = 0.0) -> Dict[str, Any]:
         results = self.retriever.retrieve(question, top_k=top_k, score_threshold=min_score)
+
         if not results:
-            answer = "No relevant context found."
+            answer = "No relevant context found in your documents."
             sources = []
-            context = ""
         else:
-            context = "\n\n".join([doc['content'] for doc in results])
-            sources = [{
-                'source': doc['metadata'].get('source_file', doc['metadata'].get('source', 'unknown')),
-                'page': doc['metadata'].get('page', 'unknown'),
-                'score': doc['similarity_score'],
-                'preview': doc['content'][:120] + '...'
-            } for doc in results]
-            # Streaming answer simulation
-            prompt = f"""Use the following context to answer the question concisely.\nContext:\n{context}\n\nQuestion: {question}\n\nAnswer:"""
-            if stream:
-                print("Streaming answer:")
-                for i in range(0, len(prompt), 80):
-                    print(prompt[i:i+80], end='', flush=True)
-                    time.sleep(0.05)
-                print()
-            answer = self.llm.generate_response(
-                question,
-                context
-            )
+            context = "\n\n".join([doc["content"] for doc in results])
+            sources = [
+                {
+                    "source": doc["metadata"].get("source_file", doc["metadata"].get("source", "unknown")),
+                    "page": doc["metadata"].get("page", "unknown"),
+                    "score": doc["similarity_score"],
+                    "preview": doc["content"][:120] + "...",
+                }
+                for doc in results
+            ]
+            answer = self.llm.generate_response(question, context)
 
-        # Add citations to answer
-        citations = [f"[{i+1}] {src['source']} (page {src['page']})" for i, src in enumerate(sources)]
-        answer_with_citations = answer + "\n\nCitations:\n" + "\n".join(citations) if citations else answer
+        citations = [f"[{i+1}] {s['source']} (page {s['page']})" for i, s in enumerate(sources)]
+        answer_with_citations = answer + "\n\n**Sources:**\n" + "\n".join(citations) if citations else answer
 
-        # Optionally summarize answer
-        summary = None
-        if summarize and answer:
-            summary_prompt = f"Summarize the following answer in 2 sentences:\n{answer}"
-            summary_resp = self.llm.invoke([summary_prompt])
-            summary = summary_resp.content
+        self.history.append({"question": question, "answer": answer, "sources": sources})
 
-        # Store query history
-        self.history.append({
-            'question': question,
-            'answer': answer,
-            'sources': sources,
-            'summary': summary
-        })
-
-        return {
-            'question': question,
-            'answer': answer_with_citations,
-            'sources': sources,
-            'summary': summary,
-            'history': self.history
-        }
+        return {"question": question, "answer": answer_with_citations, "sources": sources, "history": self.history}

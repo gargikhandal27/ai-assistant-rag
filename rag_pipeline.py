@@ -2,83 +2,58 @@ from core.pdf_loader import process_all_pdfs, split_documents
 from core.embedding_manager import EmbeddingManager
 from core.vector_store import VectorStore
 from core.retriever import RAGRetriever
-from core.llm_handler import GeminiLLM, AdvancedRAGPipeline
+from core.llm_handler import AdvancedRAGPipeline, create_llm
+
+_pipeline: AdvancedRAGPipeline | None = None
+_retriever: RAGRetriever | None = None
 
 
-def initialize_rag():
-    """Initialize full RAG pipeline"""
+def initialize_rag(provider: str, model: str) -> AdvancedRAGPipeline:
+    """
+    Build the RAG pipeline.
+    First call: loads PDFs, builds vector store, creates retriever.
+    Subsequent calls: only swaps the LLM — no PDF reloading.
+    API keys are read automatically from .env
+    """
+    global _pipeline, _retriever
 
-    # Load all PDFs
-    documents = process_all_pdfs("data/pdf")
+    # ── First-time setup ─────────────────────────────────────────────────────
+    if _retriever is None:
+        embedding_manager = EmbeddingManager()
+        vectorstore = VectorStore()
 
-    # Split into chunks
-    chunks = split_documents(documents)
+        existing_files = vectorstore.get_existing_files()
+        new_docs = process_all_pdfs("data/pdf", existing_files=existing_files)
+        chunks = split_documents(new_docs)
 
-    # Initialize embedding model
-    embedding_manager = EmbeddingManager()
-
-    # Initialize vector store
-    vectorstore = VectorStore()
-
-    # Check already indexed PDFs
-    existing_files = vectorstore.get_existing_files()
-
-    # Only add new PDFs
-    new_chunks = [
-        chunk
-        for chunk in chunks
-        if chunk.metadata.get("source_file")
-        not in existing_files
-    ]
-
-    if new_chunks:
-        print(
-            f"Adding {len(new_chunks)} new chunks"
-        )
-
-        texts = [
-            doc.page_content
-            for doc in new_chunks
+        new_chunks = [
+            c for c in chunks
+            if c.metadata.get("source_file") not in existing_files
         ]
 
-        embeddings = (
-            embedding_manager
-            .generate_embeddings(texts)
-        )
+        if new_chunks:
+            print(f"Adding {len(new_chunks)} new chunks to vector store…")
+            texts = [c.page_content for c in new_chunks]
+            embeddings = embedding_manager.generate_embeddings(texts)
+            vectorstore.add_documents(new_chunks, embeddings)
+        else:
+            print("All PDFs already indexed.")
 
-        vectorstore.add_documents(
-            new_chunks,
-            embeddings
-        )
+        _retriever = RAGRetriever(vectorstore, embedding_manager)
 
+    # ── Create / swap LLM (key comes from .env) ───────────────────────────────
+    llm = create_llm(provider, model)
+
+    if _pipeline is None:
+        _pipeline = AdvancedRAGPipeline(_retriever, llm)
     else:
-        print(
-            "All PDFs already indexed."
-        )
+        _pipeline.swap_llm(llm)
 
-    # Retriever
-    retriever = RAGRetriever(
-        vectorstore,
-        embedding_manager
-    )
-
-    # LLM
-    llm_handler = GeminiLLM()
-
-    # Full advanced pipeline
-    return AdvancedRAGPipeline(
-        retriever,
-        llm_handler
-    )
+    return _pipeline
 
 
-# Initialize once
-rag_pipeline = initialize_rag()
-
-
-def run_rag(query: str):
-    """Run query on existing pipeline"""
-
-    result = rag_pipeline.query(query)
-
+def run_rag(query: str) -> str:
+    if _pipeline is None:
+        return "Pipeline not initialized. Please click **Apply & Initialize** in the sidebar."
+    result = _pipeline.query(query)
     return result["answer"]
