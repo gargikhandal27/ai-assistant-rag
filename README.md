@@ -25,14 +25,18 @@ Users can add their own PDFs to the /data folder.
 AI ASSISTANT
 │
 ├── data
-│   ├── pdf/                # Input PDF files
-│   ├── text_files/         # Extracted text files
-│   └── vector_store/       # Vector database (ignored in git)
+│   └── pdf/                # Input PDF files
 │
-├── notebook
-│   └── document.ipynb      # Experiment notebook
+├── core
+│   ├── pdf_loder.py     
+│   ├── embedding_manager.py
+│   ├── ingest.py
+│   ├── retriever.py
+│   ├── retriever.py
+│   ├── retriever.py
+│   ├── vector_store.py 
+│   └──llm_handler.py
 │
-├── document.py             # Document processing and text extraction
 ├── rag_pipeline.py         # RAG pipeline implementation
 ├── main.py                 # Main script to run the assistant
 ├── requirements.txt        # Python dependencies

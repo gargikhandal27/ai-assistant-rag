@@ -12,3 +12,4 @@ typesense
 langchain_openai
 langgraph
 groq
+langgraph>=0.2.0

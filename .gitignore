@@ -16,7 +16,7 @@ ai-assisant-venc/
 # VSCode settings
 .vscode/
 
-# Vector database (IGNORE ONLY THIS, NOT DATA)
+# Vector database 
 vector_store/
 
 # Jupyter
